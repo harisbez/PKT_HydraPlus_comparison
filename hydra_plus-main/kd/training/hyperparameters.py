@@ -4,7 +4,7 @@ import logging
 def get_hyperparameters(dataset, method, n_tails, overwrite_hyperparameters={}):
     if dataset not in ["cifar", "regress", "spiral", "svhn"]:
         raise ValueError("Dataset not supported")
-    if method not in ["endd", "gauss", "drop", "hydra", "hydra+", "ensemble"]:
+    if method not in ["endd", "gauss", "drop", "hydra", "hydra+", "ensemble",'baseline']:
         raise ValueError("Method not supported")
 
     hyperparameters = {}
