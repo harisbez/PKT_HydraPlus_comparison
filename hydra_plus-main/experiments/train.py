@@ -14,7 +14,16 @@ def train_model(args, writer):
   logging.info('# Starting training #')
   model = None
   hyperparameters = get_hyperparameters(args.dataset, args.method, args.n_tails, args.hyperparameters)
-  if args.method == "ensemble":
+  if args.method == "baseline":
+    models = []
+    logging.info('## Training Baseline ##')
+    model = model_factory(dataset=args.dataset, method=args.method, n_tails=1, models=None, train=True, hyperparameters=hyperparameters)
+    model = utils.model_to_gpus(model, args.gpu)
+    train(args, model, teacher=None, writer=writer, special_id=1, hyperparameters=hyperparameters)
+    model.cpu()
+    logging.info(model.__repr__())
+    logging.info('## Created Baseline ##')
+  elif args.method == "ensemble":
     models = []
     logging.info('## Training Ensemble ##')
     for i in range(args.n_tails):
