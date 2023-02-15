@@ -60,7 +60,7 @@
 
 ### CIFAR-10 ###
 #### Ensemble ####
-python3 train.py --gpu 3 --dataset cifar --method ensemble --seed 1 --label seed_1
+python3 train.py --gpu 0 --dataset cifar --method ensemble --seed 1 --label seed_1
 #python3 train.py --gpu 3 --dataset cifar --method ensemble --seed 2 --label seed_2
 #python3 train.py --gpu 3 --dataset cifar --method ensemble --seed 3 --label seed_3
 #python3 average_results.py --folder_paths ./cifar/cifar-teacher-20-20220424-223105-seed_1 ./cifar/cifar-teacher-20-20220430-183155-seed_2 ./cifar/cifar-teacher-20-20220430-183242-seed_3 --label cifar-teacher
