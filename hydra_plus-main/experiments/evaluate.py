@@ -44,9 +44,9 @@ def evaluate_model(args, writer, model=None):
 
   logging.info('## Evaluation Done ##')
 
-  logging.info("### Profiling ###")
-  profile_model(model, results, args)
-  logging.info("### Finished Profiling ###")
+  # logging.info("### Profiling ###")
+  # profile_model(model, results, args) #we do not need to profile at this step
+  # logging.info("### Finished Profiling ###")
 
   utils.save_pickle(results, args.save+"/results.pt",overwrite=True)
 

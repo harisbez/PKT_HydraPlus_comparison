@@ -51,7 +51,7 @@ def model_factory(dataset, method, n_tails=None, models=None, train=True, hyperp
             raise ValueError("Method not supported")
     
     elif dataset == "cifar":
-        if method == "ensemble":
+        if method == "ensemble" or 'baseline':
             if train:
                 model = ResNet(layers=hyperparameters["n_layers"], planes = hyperparameters["n_planes"], strides=hyperparameters["strides"], output_size=output_size, end=True)
             else:

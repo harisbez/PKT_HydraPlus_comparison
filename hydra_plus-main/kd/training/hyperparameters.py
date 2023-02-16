@@ -70,7 +70,7 @@ def get_hyperparameters(dataset, method, n_tails, overwrite_hyperparameters={}):
                 hyperparameters["lambda_scheduler"] = LinearScheduler(start_epoch=50, end_epoch=150, epochs=hyperparameters["epochs"], start_value =0.0, end_value=0.6)
 
     elif dataset == "cifar":
-        hyperparameters["epochs"] = 200
+        hyperparameters["epochs"] = 10 #just for debugging
         hyperparameters["lr"] = 0.01
         hyperparameters["n_layers"] = [2, 2, 2, 2]
         hyperparameters["strides"] = [1, 2, 2, 2]
