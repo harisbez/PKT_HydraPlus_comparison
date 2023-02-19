@@ -14,6 +14,9 @@ def print_results_line(model_name='Receiver', transfer_set='-', pickle_path='', 
     line += '& ${%3.2f}$ ' % (100 * res['raw_precision'][49])  # top-50
     line += '& ${%3.2f}$ ' % (100 * res['raw_precision'][99])  # top-100
     line += '& ${%3.2f}$ ' % (100 * res['raw_precision'][199])  # top-200
+    line += ''
+    line += '& ${%3.2f}$ ' % (res['ece'])
+    line += '& ${%3.2f}$ ' % (res['error'])
 
     print(line, '\\\\')
 

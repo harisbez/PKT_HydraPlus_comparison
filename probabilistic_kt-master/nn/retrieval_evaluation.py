@@ -6,6 +6,7 @@ import numpy as np
 import pickle
 from exp_cifar.cifar_dataset import cifar10_loader
 from nn.nn_utils import load_model
+from torchmetrics.classification import MulticlassCalibrationError,MulticlassAccuracy
 
 
 class Database(object):
@@ -71,6 +72,7 @@ class Database(object):
         interpolated_precision = np.mean(precision, axis=0)
         interpolated_fine_precision = np.mean(precision_at_fine_recall_levels, axis=0)
 
+
         return m_ap, interpolated_precision, interpolated_fine_precision, self.fine_recall_levels,
 
     def evaluate(self, queries, targets, batch_size=128):
@@ -82,7 +84,9 @@ class Database(object):
         :return: the evaluated metrics
         """
         n_batches = len(targets) // batch_size
-        m_ap, fine_precision, raw_precision = None, None, None
+        m_ap, fine_precision, raw_precision, ece_calc  = None, None, None, None
+        ece_metric = MulticlassCalibrationError(num_classes=10, n_bins=10, norm='l1')
+        acuracy_metric = MulticlassAccuracy(num_classes=10)
 
         for i in tqdm(range(n_batches)):
             cur_queries = queries[i * batch_size:(i + 1) * batch_size]
@@ -101,6 +105,9 @@ class Database(object):
                 fine_precision += c_fine_precision * batch_size
                 raw_precision += c_raw_precision * batch_size
 
+        ece_calc = ece_metric(queries, targets)
+        error_calc = 1 - acuracy_metric(queries,targets)
+
         if batch_size * n_batches < len(targets):
             cur_queries = queries[batch_size * n_batches:]
             cur_targets = targets[batch_size * n_batches:]
@@ -118,7 +125,7 @@ class Database(object):
         raw_precision = raw_precision / float(len(targets))
 
         results = {'map': m_ap, 'precision': fine_precision, 'recall_levels': self.fine_recall_levels,
-                   'raw_precision': raw_precision}
+                   'raw_precision': raw_precision,'ece': ece_calc, 'error': error_calc}
 
         return results
 
