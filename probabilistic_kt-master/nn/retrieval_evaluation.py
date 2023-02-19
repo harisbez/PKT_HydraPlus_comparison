@@ -1,7 +1,8 @@
+import torch
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
 from time import time
-from nn.nn_utils import get_labels, extract_features, get_raw_features
+from nn.nn_utils import get_labels, extract_features, get_raw_features, forward_net
 import numpy as np
 import pickle
 from exp_cifar.cifar_dataset import cifar10_loader
@@ -72,10 +73,9 @@ class Database(object):
         interpolated_precision = np.mean(precision, axis=0)
         interpolated_fine_precision = np.mean(precision_at_fine_recall_levels, axis=0)
 
-
         return m_ap, interpolated_precision, interpolated_fine_precision, self.fine_recall_levels,
 
-    def evaluate(self, queries, targets, batch_size=128):
+    def evaluate(self, queries, targets, batch_size=128 , predicted = None , evaluate_features = True):
         """
         Evaluates the performance of the database using the following metrics: interpolated map, interpolated precision,
         and precision-recall curve
@@ -83,49 +83,66 @@ class Database(object):
         :param targets: the labels
         :return: the evaluated metrics
         """
-        n_batches = len(targets) // batch_size
-        m_ap, fine_precision, raw_precision, ece_calc  = None, None, None, None
-        ece_metric = MulticlassCalibrationError(num_classes=10, n_bins=10, norm='l1')
-        acuracy_metric = MulticlassAccuracy(num_classes=10)
+        if predicted is not None:
+            ece_metric = MulticlassCalibrationError(num_classes=10, n_bins=10, norm='l1')
+            accuracy_metric = MulticlassAccuracy(num_classes=10)
+            torch_predicted = torch.from_numpy(predicted)
+            torch_targets = torch.from_numpy(targets)
+            ece_calc = ece_metric(torch_predicted, torch_targets)
+            acc = accuracy_metric(torch_predicted, torch_targets)
+            error_calc = 1 - acc
 
-        for i in tqdm(range(n_batches)):
-            cur_queries = queries[i * batch_size:(i + 1) * batch_size]
-            cur_targets = targets[i * batch_size:(i + 1) * batch_size]
+        else:
+            error_calc = 'NaN'
+            ece_calc = 'NaN'
 
-            relevant_vectors = self.get_binary_relevances(cur_queries, cur_targets)
-            (c_m_ap, c_raw_precision, c_fine_precision, self.fine_recall_levels,) = \
-                self.get_metrics(relevant_vectors, cur_targets)
+        if evaluate_features:
+            n_batches = len(targets) // batch_size
+            m_ap, fine_precision, raw_precision = None, None, None,
 
-            if m_ap is None:
-                m_ap = c_m_ap * batch_size
-                fine_precision = c_fine_precision * batch_size
-                raw_precision = c_raw_precision * batch_size
-            else:
-                m_ap += c_m_ap * batch_size
-                fine_precision += c_fine_precision * batch_size
-                raw_precision += c_raw_precision * batch_size
+            for i in tqdm(range(n_batches)):
+                cur_queries = queries[i * batch_size:(i + 1) * batch_size]
+                cur_targets = targets[i * batch_size:(i + 1) * batch_size]
 
-        ece_calc = ece_metric(queries, targets)
-        error_calc = 1 - acuracy_metric(queries,targets)
+                relevant_vectors = self.get_binary_relevances(cur_queries, cur_targets)
+                (c_m_ap, c_raw_precision, c_fine_precision, self.fine_recall_levels,) = \
+                    self.get_metrics(relevant_vectors, cur_targets)
 
-        if batch_size * n_batches < len(targets):
-            cur_queries = queries[batch_size * n_batches:]
-            cur_targets = targets[batch_size * n_batches:]
+                if m_ap is None:
+                    m_ap = c_m_ap * batch_size
+                    fine_precision = c_fine_precision * batch_size
+                    raw_precision = c_raw_precision * batch_size
+                else:
+                    m_ap += c_m_ap * batch_size
+                    fine_precision += c_fine_precision * batch_size
+                    raw_precision += c_raw_precision * batch_size
 
-            relevant_vectors = self.get_binary_relevances(cur_queries, cur_targets)
-            (c_m_ap, c_raw_precision, c_fine_precision, self.fine_recall_levels,) = \
-                self.get_metrics(relevant_vectors, cur_targets)
+            if batch_size * n_batches < len(targets):
+                cur_queries = queries[batch_size * n_batches:]
+                cur_targets = targets[batch_size * n_batches:]
 
-            m_ap += c_m_ap * len(cur_targets)
-            fine_precision += c_fine_precision * len(cur_targets)
-            raw_precision += c_raw_precision * len(cur_targets)
+                relevant_vectors = self.get_binary_relevances(cur_queries, cur_targets)
+                (c_m_ap, c_raw_precision, c_fine_precision, self.fine_recall_levels,) = \
+                    self.get_metrics(relevant_vectors, cur_targets)
 
-        m_ap = m_ap / float(len(targets))
-        fine_precision = fine_precision / float(len(targets))
-        raw_precision = raw_precision / float(len(targets))
+                m_ap += c_m_ap * len(cur_targets)
+                fine_precision += c_fine_precision * len(cur_targets)
+                raw_precision += c_raw_precision * len(cur_targets)
 
-        results = {'map': m_ap, 'precision': fine_precision, 'recall_levels': self.fine_recall_levels,
-                   'raw_precision': raw_precision,'ece': ece_calc, 'error': error_calc}
+            m_ap = m_ap / float(len(targets))
+            fine_precision = fine_precision / float(len(targets))
+            raw_precision = raw_precision / float(len(targets))
+        else:
+            m_ap, fine_precision, raw_precision = 'NaN', 'NaN', 'NaN'
+
+        results = {
+            'map': m_ap,
+            'precision': fine_precision,
+            'recall_levels': self.fine_recall_levels,
+            'raw_precision': raw_precision,
+            'ece': ece_calc,
+            'error': error_calc
+           }
 
         return results
 
@@ -144,6 +161,9 @@ def retrieval_evaluation(net, train_loader, test_loader, metric='cosine', raw=Fa
     train_labels = get_labels(train_loader)
     test_labels = get_labels(test_loader)
 
+    # get the prediction
+    test_predicted = forward_net(net, test_loader)
+
     # Get the features
     a = time()
     if raw:
@@ -158,7 +178,7 @@ def retrieval_evaluation(net, train_loader, test_loader, metric='cosine', raw=Fa
     # Evaluate the model
     database = Database(train_features, train_labels, metric=metric)
     a = time()
-    results = database.evaluate(test_features, test_labels, batch_size=128)
+    results = database.evaluate(test_features, test_labels, batch_size=128,predicted = test_predicted , evaluate_features= False)
     retrieval_time = (time() - a) / float(len(test_labels))
 
     results['retrieval_time'] = retrieval_time

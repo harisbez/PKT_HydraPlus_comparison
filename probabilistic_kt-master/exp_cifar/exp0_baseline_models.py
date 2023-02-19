@@ -37,34 +37,35 @@ def train_cifar_models():
     """
 
     # ResNet training
-    net = ResNet18()
-    net.cuda()
-    train_cifar10_model(net, learning_rates=[0.001, 0.0001], iters=[50, 50],
-                        output_path='models/resnet18_cifar10.model')
+    # net = ResNet18()
+    # net.cuda()
+    # train_cifar10_model(net, learning_rates=[0.001, 0.0001], iters=[2, 2],
+    #                     output_path='exp_cifar/models/new/resnet18_cifar10.model')
 
     # Cifar Tiny
-    net = Cifar_Tiny()
-    net.cuda()
-    train_cifar10_model(net, learning_rates=[0.001, 0.0001], iters=[50, 50],
-                        output_path='models/tiny_cifar10.model')
+    # net = Cifar_Tiny()
+    # net.cuda()
+    # train_cifar10_model(net, learning_rates=[0.001, 0.0001], iters=[2, 2],
+    #                     output_path='exp_cifar/models/new/tiny_cifar10.model')
 
 def evaluate_cifar_models_retrieval():
     """
     Evaluates the baselines teacher/students
     :return:
     """
-    evaluate_model_retrieval(net=Cifar_Tiny(num_classes=10), path='models/tiny_cifar10.model',
-                             result_path='results/tiny_cifar10_baseline.pickle')
+    evaluate_model_retrieval(net=Cifar_Tiny(num_classes=10), path='exp_cifar/models/new/tiny_cifar10.model',
+                             result_path='exp_cifar/results/new/tiny_cifar10_baseline.pickle')
 
-    evaluate_model_retrieval(net=ResNet18(num_classes=10), path='models/resnet18_cifar10.model',
-                   result_path='results/resnet18_cifar10_baseline.pickle')
+    evaluate_model_retrieval(net=ResNet18(num_classes=10), path='exp_cifar/models/new/resnet18_cifar10.model',
+                   result_path='exp_cifar/results/new/resnet18_cifar10_baseline.pickle')
 
 
 
-if __name__ == '__main__':
-    # Training the teacher model takes approximately a day, so you can use the pretrained model
-    # train_cifar_models()
 
-    evaluate_cifar_models_retrieval()
+# if __name__ == '__main__':
+#     # Training the teacher model takes approximately a day, so you can use the pretrained model
+#     train_cifar_models()
+
+    # evaluate_cifar_models_retrieval()
 
 

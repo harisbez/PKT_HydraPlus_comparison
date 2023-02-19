@@ -82,11 +82,11 @@ def extract_features(net, test_loader):
     features = []
     for (inputs, targets) in tqdm(test_loader):
         inputs = inputs.cuda()
-        inputs = Variable(inputs, volatile=True)
-
-        outputs = net.get_features(inputs)
-        outputs = outputs.cpu()
-        features.append(outputs.data.numpy())
+        inputs = Variable(inputs) #volatile=True was removed with torch.no_grad --> this is used to preserve memory
+        with torch.no_grad():
+            outputs = net.get_features(inputs)
+            outputs = outputs.cpu()
+            features.append(outputs.data.numpy())
 
     return np.concatenate(features)
 
@@ -98,4 +98,24 @@ def get_raw_features(test_loader):
     features = []
     for (inputs, targets) in tqdm(test_loader):
         features.append(np.float16(inputs.numpy()))
+    return np.concatenate(features)
+
+def forward_net(net, test_loader):
+    """
+    Extracts features from a neural network
+    :param net: a network that must implement net.get_features()
+    :param test_loader:
+    :return:
+    """
+    net.eval()
+
+    features = []
+    for (inputs, targets) in tqdm(test_loader):
+        inputs = inputs.cuda()
+        inputs = Variable(inputs) #volatile=True was removed with torch.no_grad --> this is used to preserve memory
+        with torch.no_grad():
+            outputs = net(inputs)
+            outputs = outputs.cpu()
+            features.append(outputs.data.numpy())
+
     return np.concatenate(features)
